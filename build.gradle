@@ -1,0 +1,167 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = mod_version
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+    copyIdeResources = true
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods {
+                "${mod_id}" {
+                    source sourceSets.main
+                }
+            }
+        }
+
+        client {
+            property 'forge.enabledGameTestNamespaces', mod_id
+            // For Curios & Patchouli
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
+        }
+
+        server {
+            property 'forge.enabledGameTestNamespaces', mod_id
+            args '--nogui'
+            // For Curios
+            property 'mixin.env.remapRefMap', 'true'
+            property 'mixin.env.refMapRemappingFile', "${buildDir}/createSrgToMcp/output.srg"
+        }
+
+        gameTestServer {
+            property 'forge.enabledGameTestNamespaces', mod_id
+        }
+
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+repositories {
+    maven { url = "https://maven.theillusivec4.top/"}
+    maven { url = "https://dvs1.progwml6.com/files/maven/"}
+    maven { url = "https://modmaven.dev"}
+    maven { url = "https://minecraft.curseforge.com/api/maven/"}
+    maven { url = "https://www.cursemaven.com"}
+    maven { url 'https://maven.blamejared.com' }
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    /* Utility Test Mods */
+    // JEI
+    compileOnly fg.deobf("mezz.jei:jei-1.20.2-common-api:16.0.0.28")
+    compileOnly fg.deobf("mezz.jei:jei-1.20.2-forge-api:16.0.0.28")
+    runtimeOnly fg.deobf("mezz.jei:jei-1.20.2-common:16.0.0.28")
+    runtimeOnly fg.deobf("mezz.jei:jei-1.20.2-forge:16.0.0.28")
+
+    // Curios
+    //runtimeOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.2.0-beta.3+1.20.1")
+    //compileOnly fg.deobf("top.theillusivec4.curios:curios-forge:5.2.0-beta.3+1.20.1:api")
+
+    //Patchouli
+    //compileOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-81-FORGE:api")
+    //runtimeOnly fg.deobf("vazkii.patchouli:Patchouli:1.20.1-81-FORGE")
+
+    /* Mods To Test */
+    // Lemon Core
+    runtimeOnly fg.deobf("curse.maven:lemon-core-840168:4714868")
+
+    // Scalar Utils 5 (Needs Curios)
+    //runtimeOnly fg.deobf("curse.maven:scalar_utils-735569:4758019")
+    //runtimeOnly fg.deobf("curse.maven:scalar_utils_agriculture_addon-837403:4671956")
+
+    // Better Mods
+    //runtimeOnly fg.deobf("curse.maven:better_angel_ring-904974:4714809")
+    runtimeOnly fg.deobf("curse.maven:better_apatite-873232:4659106")
+    runtimeOnly fg.deobf("curse.maven:better_berries-880536:4722542")
+    runtimeOnly fg.deobf("curse.maven:better_berries_plus-915749:4764414")
+    runtimeOnly fg.deobf("curse.maven:better_bronze-872159:4764418")
+    runtimeOnly fg.deobf("curse.maven:better_certus_quartz-886237:4661049")
+    runtimeOnly fg.deobf("curse.maven:better_lead-884216:4716174")
+    runtimeOnly fg.deobf("curse.maven:better_rubber-872895:4714912")
+    runtimeOnly fg.deobf("curse.maven:better_silicon-782533:4659289")
+    runtimeOnly fg.deobf("curse.maven:better_silver-880878:4764385")
+    runtimeOnly fg.deobf("curse.maven:better_steel-871307:4659306")
+
+    // Other Mods
+    runtimeOnly fg.deobf("curse.maven:black_lotus-886565:4714916")
+    runtimeOnly fg.deobf("curse.maven:discounts_construct-902798:4708673")
+    runtimeOnly fg.deobf("curse.maven:lite_exchange-700568:4684671")
+    runtimeOnly fg.deobf("curse.maven:project_yellow-876674:4716138")
+    runtimeOnly fg.deobf("curse.maven:reaped-915756:4764442")
+    runtimeOnly fg.deobf("curse.maven:soul_cages-899336:4716185")
+    runtimeOnly fg.deobf("curse.maven:xychron-877090:4691507")
+
+
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
+            forge_version: forge_version, forge_version_range: forge_version_range,
+            loader_version_range: loader_version_range,
+            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors: mod_authors, mod_description: mod_description,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+tasks.named('jar', Jar).configure {
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1', // We are version 1 of ourselves
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+
+    finalizedBy 'reobfJar'
+}
+
+publishing {
+    publications {
+        register('mavenJava', MavenPublication) {
+            artifact jar
+        }
+    }
+    repositories {
+        maven {
+            url "file://${project.projectDir}/mcmodsrepo"
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
